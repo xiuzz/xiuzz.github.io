@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <meta name="author" content="xiuzz">
+
+
+
+
+
+<title>Linux UDP 协议栈源码解析 | Xiuzz&#39;s Blog</title>
+
+
+
+    <link rel="icon" href="/favicon.ico">
+
+
+
+
+    <!-- stylesheets list from _config.yml -->
+    
+    <link rel="stylesheet" href="/css/style.css">
+    
+
+
+
+    <!-- scripts list from _config.yml -->
+    
+    <script src="/js/script.js"></script>
+    
+    <script src="/js/tocbot.min.js"></script>
+    
+
+
+
+    
+    
+        
+    
+
+
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+<body>
+    <script>
+        // this function is used to check current theme before page loaded.
+        (() => {
+            const pagebody = document.getElementsByTagName('body')[0]
+
+            function setTheme(status) {
+
+                if (status === 'dark') {
+                    window.sessionStorage.theme = 'dark'
+                    pagebody.classList.add('dark-theme');
+
+                } else if (status === 'light') {
+                    window.sessionStorage.theme = 'light'
+                    pagebody.classList.remove('dark-theme');
+                }
+            };
+
+            setTheme(window.sessionStorage.theme)
+        })();
+    </script>
+
+    <div class="wrapper">
+        <header>
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-header header-logo"><a href="/">Xiuzz&#39;s Blog</a></div>
+            <div class="menu navbar-right">
+                
+                <a class="menu-item" href="/archives">Posts</a>
+                
+                <a class="menu-item" href="/category">Categories</a>
+                
+                <a class="menu-item" href="/tag">Tags</a>
+                
+                <a class="menu-item" href="/about">About</a>
+                
+                
+                <input id="switch_default" type="checkbox" class="switch_default">
+                <label for="switch_default" class="toggleBtn"></label>
+            </div>
+        </div>
+    </nav>
+
+    
+    <nav class="navbar-mobile" id="nav-mobile">
+        <div class="container">
+            <div class="navbar-header">
+                <div>
+                    <a href="/">Xiuzz&#39;s Blog</a><a id="mobile-toggle-theme">·&nbsp;Light</a>
+                </div>
+                <div class="menu-toggle" onclick="mobileBtn()">
+                    <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"><path fill="currentColor" d="M4.5 17.27q-.213 0-.356-.145T4 16.768t.144-.356t.356-.143h15q.213 0 .356.144q.144.144.144.357t-.144.356t-.356.143zm0-4.77q-.213 0-.356-.144T4 11.999t.144-.356t.356-.143h15q.213 0 .356.144t.144.357t-.144.356t-.356.143zm0-4.77q-.213 0-.356-.143Q4 7.443 4 7.23t.144-.356t.356-.143h15q.213 0 .356.144T20 7.23t-.144.356t-.356.144z"/></svg>
+                    <svg class="close-icon" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"><!-- Icon from Material Symbols Light by Google - https://github.com/google/material-design-icons/blob/master/LICENSE --><path fill="currentColor" d="m12 12.708l-5.246 5.246q-.14.14-.344.15t-.364-.15t-.16-.354t.16-.354L11.292 12L6.046 6.754q-.14-.14-.15-.344t.15-.364t.354-.16t.354.16L12 11.292l5.246-5.246q.14-.14.345-.15q.203-.01.363.15t.16.354t-.16.354L12.708 12l5.246 5.246q.14.14.15.345q.01.203-.15.363t-.354.16t-.354-.16z"/></svg>
+                </div>
+            </div>
+            <div class="menu" id="mobile-menu">
+                
+                <a class="menu-item" href="/archives">Posts</a>
+                
+                <a class="menu-item" href="/category">Categories</a>
+                
+                <a class="menu-item" href="/tag">Tags</a>
+                
+                <a class="menu-item" href="/about">About</a>
+                
+            </div>
+        </div>
+    </nav>
+
+</header>
+<script>
+    var mobileBtn = function f() {
+        var toggleMenu = document.getElementsByClassName("menu-toggle")[0];
+        var mobileMenu = document.getElementById("mobile-menu");
+        if (toggleMenu.classList.contains("active")) {
+            toggleMenu.classList.remove("active")
+            mobileMenu.classList.remove("active")
+        } else {
+            toggleMenu.classList.add("active")
+            mobileMenu.classList.add("active")
+        }
+    }
+</script>
+            <div class="main">
+                <div class="container">
+    
+    
+        <div class="post-toc">
+    <div class="tocbot-list">
+    </div>
+    <div class="tocbot-list-menu">
+        <a class="tocbot-toc-expand" onclick="expand_toc()">Expand all</a>
+        <a onclick="go_top()">Back to top</a>
+        <a onclick="go_bottom()">Go to bottom</a>
+    </div>
+</div>
+
+<script>
+    var tocbot_timer;
+    var DEPTH_MAX = 6; // 为 6 时展开所有
+    var tocbot_default_config = {
+        tocSelector: '.tocbot-list',
+        contentSelector: '.post-content',
+        headingSelector: 'h1, h2, h3, h4, h5',
+        orderedList: false,
+        scrollSmooth: true,
+        onClick: extend_click,
+    };
+
+    function extend_click() {
+        clearTimeout(tocbot_timer);
+        tocbot_timer = setTimeout(function() {
+            tocbot.refresh(obj_merge(tocbot_default_config, {
+                hasInnerContainers: true
+            }));
+        }, 420); // 这个值是由 tocbot 源码里定义的 scrollSmoothDuration 得来的
+    }
+
+    document.ready(function() {
+        tocbot.init(obj_merge(tocbot_default_config, {
+            collapseDepth: 1
+        }));
+    });
+
+    function expand_toc() {
+        var b = document.querySelector('.tocbot-toc-expand');
+        var expanded = b.getAttribute('data-expanded');
+        expanded ? b.removeAttribute('data-expanded') : b.setAttribute('data-expanded', true);
+        tocbot.refresh(obj_merge(tocbot_default_config, {
+            collapseDepth: expanded ? 1 : DEPTH_MAX
+        }));
+        b.innerText = expanded ? 'Expand all' : 'Collapse all';
+    }
+
+    function go_top() {
+        window.scrollTo(0, 0);
+    }
+
+    function go_bottom() {
+        window.scrollTo(0, document.body.scrollHeight);
+    }
+
+    function obj_merge(target, source) {
+        for (var item in source) {
+            if (source.hasOwnProperty(item)) {
+                target[item] = source[item];
+            }
+        }
+        return target;
+    }
+</script>
+    
+
+    
+    <article class="post-wrap">
+        <header class="post-header">
+            <h1 class="post-title">Linux UDP 协议栈源码解析</h1>
+            
+                <div class="post-meta">
+                    
+                        Author: <a itemprop="author" rel="author" href="/">xiuzz</a>
+                    
+
+                    
+                        <span class="post-time">
+                        Date: <a href="#">六月 13, 2026&nbsp;&nbsp;0:00:00</a>
+                        </span>
+                    
+                    
+                        <span class="post-category">
+                    Category:
+                            
+                                <a href="/categories/%E7%BD%91%E7%BB%9C/">网络</a>
+                            
+                        </span>
+                    
+                </div>
+            
+        </header>
+
+        <div class="post-content">
+            <h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>UDP（User Datagram Protocol）是传输层最简洁的协议之一。与 TCP 相比，UDP 无连接、不可靠、面向数据报，核心代码量只有 TCP 的十分之一左右。本文以 Linux 内核 v6.x 为主线，分析 UDP 的收发路径。</p>
+<p>整体数据流：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">应用层    sendto()/sendmsg()              recvfrom()/recvmsg()</span><br><span class="line">           ↓                                    ↑</span><br><span class="line">Socket层   udp_sendmsg()                  udp_recvmsg()</span><br><span class="line">           ↓                                    ↑</span><br><span class="line">传输层     udp_push_pending_frames()      __udp4_lib_rcv()</span><br><span class="line">           ↓                                    ↑</span><br><span class="line">网络层     ip_queue_xmit()               ip_local_deliver_finish()</span><br></pre></td></tr></table></figure>
+
+<h2 id="1-数据结构"><a href="#1-数据结构" class="headerlink" title="1. 数据结构"></a>1. 数据结构</h2><h3 id="1-1-UDP-头部-8-字节"><a href="#1-1-UDP-头部-8-字节" class="headerlink" title="1.1 UDP 头部 (8 字节)"></a>1.1 UDP 头部 (8 字节)</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// include/uapi/linux/udp.h</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">udphdr</span> &#123;</span></span><br><span class="line">    __be16  source;   <span class="comment">// 源端口</span></span><br><span class="line">    __be16  dest;     <span class="comment">// 目的端口</span></span><br><span class="line">    __be16  len;      <span class="comment">// UDP 数据报总长度 (头部 + 数据)</span></span><br><span class="line">    __sum16 check;    <span class="comment">// 校验和</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<h3 id="1-2-UDP-Socket-结构"><a href="#1-2-UDP-Socket-结构" class="headerlink" title="1.2 UDP Socket 结构"></a>1.2 UDP Socket 结构</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// include/linux/udp.h</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">udp_sock</span> &#123;</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">inet_sock</span> <span class="title">inet</span>;</span></span><br><span class="line">    <span class="type">int</span>             pending;        <span class="comment">// 待处理的数据报数</span></span><br><span class="line">    <span class="type">unsigned</span> <span class="type">int</span>    corkflag;       <span class="comment">// 是否启用 cork (聚合发送)</span></span><br><span class="line">    __u8            encap_type;     <span class="comment">// 封装类型 (如 UDP_ENCAP_ESPINUDP)</span></span><br><span class="line">    <span class="type">unsigned</span> <span class="type">int</span>    no_check6_tx:<span class="number">1</span>; <span class="comment">// 发送时跳过 IPv6 校验和</span></span><br><span class="line">    <span class="type">unsigned</span> <span class="type">int</span>    no_check6_rx:<span class="number">1</span>; <span class="comment">// 接收时跳过 IPv6 校验和</span></span><br><span class="line">    <span class="type">unsigned</span> <span class="type">int</span>    gro_enabled:<span class="number">1</span>;  <span class="comment">// GRO 使能</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<h3 id="1-3-双-Hash-表"><a href="#1-3-双-Hash-表" class="headerlink" title="1.3 双 Hash 表"></a>1.3 双 Hash 表</h3><p>UDP 使用两个 hash 表加速 socket 查找：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// net/ipv4/udp.c</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">udp_table</span> &#123;</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">udp_hslot</span>    *<span class="title">hash</span>;</span>      <span class="comment">// 主 hash 表 (端口)</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">udp_hslot</span>    *<span class="title">hash2</span>;</span>     <span class="comment">// 辅助 hash 表 (端口 + 地址)</span></span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">udp_hslot</span> &#123;</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">hlist_head</span>   <span class="title">head</span>;</span>       <span class="comment">// socket 链表头</span></span><br><span class="line">    <span class="type">int</span>                 count;      <span class="comment">// 槽内 socket 数量</span></span><br><span class="line">    <span class="type">spinlock_t</span>          lock;       <span class="comment">// 槽级别自旋锁</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p><code>hash</code> 只对端口取模，<code>hash2</code> 额外关联 IP 地址，能更快定位到精确匹配的 socket。</p>
+<h2 id="2-Socket-创建"><a href="#2-Socket-创建" class="headerlink" title="2. Socket 创建"></a>2. Socket 创建</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// net/ipv4/udp.c</span></span><br><span class="line"><span class="type">int</span> <span class="title function_">udp_init_sock</span><span class="params">(<span class="keyword">struct</span> sock *sk)</span></span><br><span class="line">&#123;</span><br><span class="line">    udp_lib_init_sock(sk);</span><br><span class="line">    sk-&gt;sk_destruct = udp_destruct_sock();</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">void</span> <span class="title function_">udp_lib_init_sock</span><span class="params">(<span class="keyword">struct</span> sock *sk)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">udp_sock</span> *<span class="title">up</span> =</span> udp_sk(sk);</span><br><span class="line"></span><br><span class="line">    skb_queue_head_init(&amp;up-&gt;reader_queue);</span><br><span class="line">    up-&gt;pending = <span class="number">0</span>;</span><br><span class="line">    up-&gt;corkflag = <span class="number">0</span>;</span><br><span class="line">    sk-&gt;sk_write_space = udp_write_space;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>UDP socket 初始化非常轻量——没有连接状态机，没有发送&#x2F;接收缓冲区预分配，也没有拥塞控制。</p>
+<h2 id="3-发送路径-udp-sendmsg"><a href="#3-发送路径-udp-sendmsg" class="headerlink" title="3. 发送路径: udp_sendmsg()"></a>3. 发送路径: udp_sendmsg()</h2><p>位于 <code>net/ipv4/udp.c</code>，核心流程：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> <span class="title function_">udp_sendmsg</span><span class="params">(<span class="keyword">struct</span> sock *sk, <span class="keyword">struct</span> msghdr *msg, <span class="type">size_t</span> len)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">inet_sock</span> *<span class="title">inet</span> =</span> inet_sk(sk);</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">udp_sock</span> *<span class="title">up</span> =</span> udp_sk(sk);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 步骤 1: 获取目标地址</span></span><br><span class="line">    <span class="keyword">if</span> (msg-&gt;msg_name) &#123;</span><br><span class="line">        <span class="comment">// 非连接模式：从 msg_name 解析</span></span><br><span class="line">        daddr = usin-&gt;sin_addr.s_addr;</span><br><span class="line">        dport = usin-&gt;sin_port;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="comment">// 已连接模式：使用保存的地址</span></span><br><span class="line">        daddr = inet-&gt;inet_daddr;</span><br><span class="line">        dport = inet-&gt;inet_dport;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 步骤 2: 路由查找</span></span><br><span class="line">    rt = ip_route_output_flow(net, fl4, sk);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 步骤 3: 构建 skb</span></span><br><span class="line">    err = ip_append_data(sk, fl4, udp_getfrag_nosum, msg, ulen);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 步骤 4: 如果不是 cork 模式，立即发送</span></span><br><span class="line">    <span class="keyword">if</span> (!up-&gt;corkflag)</span><br><span class="line">        err = udp_push_pending_frames(sk);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="Cork-机制"><a href="#Cork-机制" class="headerlink" title="Cork 机制"></a>Cork 机制</h3><p>当应用要连续发送多个小数据报时，cork 把数据暂存，等积累到一定量后一次性发送：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 应用层通过 setsockopt(UDP_CORK) 或 MSG_MORE 标志启用</span></span><br><span class="line"><span class="keyword">if</span> (up-&gt;corkflag) &#123;</span><br><span class="line">    up-&gt;pending++;   <span class="comment">// 暂存数据，不立即发送</span></span><br><span class="line">    <span class="keyword">return</span> size;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 统一发送</span></span><br><span class="line"><span class="type">int</span> <span class="title function_">udp_push_pending_frames</span><span class="params">(<span class="keyword">struct</span> sock *sk)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">return</span> udp_push_one(sk, up);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="校验和计算"><a href="#校验和计算" class="headerlink" title="校验和计算"></a>校验和计算</h3><p>覆盖 UDP 头部 + 数据 + 伪头部（源 IP、目标 IP、协议号、UDP 长度）：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">int</span> <span class="title function_">udp_send_skb</span><span class="params">(<span class="keyword">struct</span> sk_buff *skb, <span class="keyword">struct</span> flowi4 *fl4, ...)</span></span><br><span class="line">&#123;</span><br><span class="line">    uh = udp_hdr(skb);</span><br><span class="line">    uh-&gt;source = inet-&gt;inet_sport;</span><br><span class="line">    uh-&gt;dest   = fl4-&gt;fl4_dport;</span><br><span class="line">    uh-&gt;len    = htons(skb-&gt;len);</span><br><span class="line">    uh-&gt;check  = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 校验和包含伪头部</span></span><br><span class="line">    uh-&gt;check = csum_tcpudp_magic(fl4-&gt;saddr, fl4-&gt;daddr,</span><br><span class="line">                                   skb-&gt;len, IPPROTO_UDP, csum);</span><br><span class="line">    <span class="keyword">return</span> ip_send_skb(skb);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="4-接收路径-udp4-lib-rcv"><a href="#4-接收路径-udp4-lib-rcv" class="headerlink" title="4. 接收路径: __udp4_lib_rcv()"></a>4. 接收路径: __udp4_lib_rcv()</h2><p>从 IP 层 <code>ip_local_deliver_finish()</code> 进入，核心流程分三步：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> __udp4_lib_rcv(<span class="keyword">struct</span> sk_buff *skb, <span class="keyword">struct</span> udp_table *udptable, <span class="type">int</span> proto)</span><br><span class="line">&#123;</span><br><span class="line">    uh   = udp_hdr(skb);</span><br><span class="line">    saddr = ip_hdr(skb)-&gt;saddr;</span><br><span class="line">    daddr = ip_hdr(skb)-&gt;daddr;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 步骤 1: 校验和验证</span></span><br><span class="line">    <span class="keyword">if</span> (udp_lib_checksum_complete(skb))</span><br><span class="line">        <span class="keyword">goto</span> csum_error;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 步骤 2: 查找目标 socket（双 hash 表）</span></span><br><span class="line">    sk = __udp4_lib_lookup_skb(skb, uh-&gt;source, uh-&gt;dest);</span><br><span class="line">    <span class="keyword">if</span> (!sk)</span><br><span class="line">        <span class="keyword">goto</span> no_socket;  <span class="comment">// → ICMP Port Unreachable</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">// 步骤 3: 入队唤醒</span></span><br><span class="line">    <span class="keyword">return</span> udp_queue_rcv_skb(sk, skb);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="Socket-查找策略"><a href="#Socket-查找策略" class="headerlink" title="Socket 查找策略"></a>Socket 查找策略</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">sock</span> *__<span class="title">udp4_lib_lookup</span>(...)</span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line">    <span class="comment">// 阶段 1: hash2 精确匹配 (addr + port)</span></span><br><span class="line">    sk = udp4_lib_lookup2(net, saddr, sport, daddr, hnum, ..., slot2, skb);</span><br><span class="line">    <span class="keyword">if</span> (sk) <span class="keyword">goto</span> found;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 阶段 2: hash 回退匹配 (只按 port，匹配 INADDR_ANY 绑定)</span></span><br><span class="line">    sk = udp4_lib_lookup2(net, ..., &amp;udptable-&gt;hash[hash], skb);</span><br><span class="line">found:</span><br><span class="line">    <span class="comment">// SO_REUSEPORT 负载均衡</span></span><br><span class="line">    <span class="keyword">if</span> (hlist_count &gt; <span class="number">1</span>)</span><br><span class="line">        sk = reuseport_select_sock(sk, hash, skb, ...);</span><br><span class="line">    <span class="keyword">return</span> sk;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="入队处理"><a href="#入队处理" class="headerlink" title="入队处理"></a>入队处理</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">int</span> <span class="title function_">udp_queue_rcv_skb</span><span class="params">(<span class="keyword">struct</span> sock *sk, <span class="keyword">struct</span> sk_buff *skb)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">// 接收缓冲区满？丢包</span></span><br><span class="line">    <span class="keyword">if</span> (sk_rcvqueues_full(sk, sk-&gt;sk_rcvbuf))</span><br><span class="line">        <span class="keyword">goto</span> drop;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 常规路径：加入接收队列</span></span><br><span class="line">    skb_queue_tail(&amp;sk-&gt;sk_receive_queue, skb);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 唤醒阻塞在 recvfrom() 的进程</span></span><br><span class="line">    sk-&gt;sk_data_ready(sk);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="应用层读取-udp-recvmsg"><a href="#应用层读取-udp-recvmsg" class="headerlink" title="应用层读取: udp_recvmsg()"></a>应用层读取: udp_recvmsg()</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> <span class="title function_">udp_recvmsg</span><span class="params">(<span class="keyword">struct</span> sock *sk, <span class="keyword">struct</span> msghdr *msg, <span class="type">size_t</span> len, ...)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">// 从队列取 skb</span></span><br><span class="line">    skb = __skb_recv_udp(sk, flags, noblock, &amp;err, &amp;off);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 拷贝数据到用户态</span></span><br><span class="line">    err = skb_copy_datagram_msg(skb, <span class="number">0</span>, msg, copied);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 填充源地址 (for recvfrom)</span></span><br><span class="line">    <span class="keyword">if</span> (msg-&gt;msg_name) &#123;</span><br><span class="line">        <span class="built_in">sin</span>-&gt;sin_port = udp_hdr(skb)-&gt;source;</span><br><span class="line">        <span class="built_in">sin</span>-&gt;sin_addr.s_addr = ip_hdr(skb)-&gt;saddr;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    skb_consume_udp(sk, skb, copied);</span><br><span class="line">    <span class="keyword">return</span> copied;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="5-性能优化"><a href="#5-性能优化" class="headerlink" title="5. 性能优化"></a>5. 性能优化</h2><p><strong>SO_REUSEPORT</strong>：多个 socket 绑定同一 (地址, 端口)，内核按数据报 hash 分发到不同 socket，利用多核。</p>
+<p><strong>GRO</strong>：NAPI 软中断中合并同流连续 UDP 数据报，减少协议栈处理次数。</p>
+<p><strong>UDP LITE</strong>：只校验部分数据，适合视频流等容忍少量数据损坏的场景。</p>
+<h2 id="6-与-TCP-的关键区别"><a href="#6-与-TCP-的关键区别" class="headerlink" title="6. 与 TCP 的关键区别"></a>6. 与 TCP 的关键区别</h2><table>
+<thead>
+<tr>
+<th>特性</th>
+<th>UDP</th>
+<th>TCP</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>连接状态</td>
+<td>无</td>
+<td>三次握手 + 状态机</td>
+</tr>
+<tr>
+<td>可靠性</td>
+<td>无确认&#x2F;重传</td>
+<td>序号 + ACK</td>
+</tr>
+<tr>
+<td>流量控制</td>
+<td>无</td>
+<td>滑动窗口</td>
+</tr>
+<tr>
+<td>拥塞控制</td>
+<td>无</td>
+<td>慢启动、拥塞避免</td>
+</tr>
+<tr>
+<td>头部大小</td>
+<td>8 字节</td>
+<td>20-60 字节</td>
+</tr>
+<tr>
+<td>发送路径</td>
+<td>~400 行</td>
+<td>~3000+ 行</td>
+</tr>
+</tbody></table>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>UDP 内核实现围绕三个核心函数：<code>udp_sendmsg()</code> 构建并发送数据报，<code>__udp4_lib_rcv()</code> 校验并查找 socket 入队，<code>udp_recvmsg()</code> 从队列取出拷贝到用户态。没有状态机、重传定时器、拥塞窗口——简单即高效，这也是它支撑 DNS、视频流、QUIC&#x2F;WebRTC 等上层协议的基础。</p>
+
+        </div>
+
+        
+            <section class="post-copyright">
+                
+                    <p class="copyright-item">
+                        <span>Author:</span>
+                        <span>xiuzz</span>
+                    </p>
+                
+                
+                    <p class="copyright-item">
+                        <span>Permalink:</span>
+                        <span><a href="https://xiuzz.github.io/2026/06/13/udp-source-code-analysis/">https://xiuzz.github.io/2026/06/13/udp-source-code-analysis/</a></span>
+                    </p>
+                
+                
+                    <p class="copyright-item">
+                        <span>License:</span>
+                        <span>Copyright (c) 2019 <a target="_blank" rel="noopener" href="http://creativecommons.org/licenses/by-nc/4.0/">CC-BY-NC-4.0</a> LICENSE</span>
+                    </p>
+                
+                
+                     <p class="copyright-item">
+                         <span>Slogan:</span>
+                         <span>Do you believe in <strong>DESTINY</strong>?</span>
+                     </p>
+                
+
+            </section>
+        
+        <section class="post-tags">
+            <div>
+                <span>Tag(s):</span>
+                <span class="tag">
+                    
+                    
+                        <a href="/tags/UDP/"># UDP</a>
+                    
+                        <a href="/tags/Linux/"># Linux</a>
+                    
+                        <a href="/tags/%E7%BD%91%E7%BB%9C%E5%8D%8F%E8%AE%AE%E6%A0%88/"># 网络协议栈</a>
+                    
+                        <a href="/tags/%E5%86%85%E6%A0%B8/"># 内核</a>
+                    
+                        
+                </span>
+            </div>
+            <div>
+                <a href="javascript:window.history.back();">back</a>
+                <span>· </span>
+                <a href="/">home</a>
+            </div>
+        </section>
+        <section class="post-nav">
+            
+                <a class="prev" rel="prev" href="/2026/06/13/hello-world/">Hello World</a>
+            
+            
+        </section>
+
+
+    </article>
+</div>
+
+            </div>
+            <footer id="footer" class="footer">
+    <div class="copyright">
+        <span>© xiuzz | Powered by <a href="https://hexo.io" target="_blank">Hexo</a> & <a href="https://github.com/Siricee/hexo-theme-Chic" target="_blank">Chic</a></span>
+    </div>
+</footer>
+
+    </div>
+</body>
+
+</html>

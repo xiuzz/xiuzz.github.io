@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <meta name="author" content="xiuzz">
+
+
+
+
+
+<title>Hermes Agent 接入微信 ClawBot 实操指南 | Xiuzz&#39;s Blog</title>
+
+
+
+    <link rel="icon" href="/favicon.ico">
+
+
+
+
+    <!-- stylesheets list from _config.yml -->
+    
+    <link rel="stylesheet" href="/css/style.css">
+    
+
+
+
+    <!-- scripts list from _config.yml -->
+    
+    <script src="/js/script.js"></script>
+    
+    <script src="/js/tocbot.min.js"></script>
+    
+
+
+
+    
+    
+        
+    
+
+
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+<body>
+    <script>
+        // this function is used to check current theme before page loaded.
+        (() => {
+            const pagebody = document.getElementsByTagName('body')[0]
+
+            function setTheme(status) {
+
+                if (status === 'dark') {
+                    window.sessionStorage.theme = 'dark'
+                    pagebody.classList.add('dark-theme');
+
+                } else if (status === 'light') {
+                    window.sessionStorage.theme = 'light'
+                    pagebody.classList.remove('dark-theme');
+                }
+            };
+
+            setTheme(window.sessionStorage.theme)
+        })();
+    </script>
+
+    <div class="wrapper">
+        <header>
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-header header-logo"><a href="/">Xiuzz&#39;s Blog</a></div>
+            <div class="menu navbar-right">
+                
+                <a class="menu-item" href="/archives">Posts</a>
+                
+                <a class="menu-item" href="/categories">Categories</a>
+                
+                <a class="menu-item" href="/tags">Tags</a>
+                
+                <a class="menu-item" href="/about">About</a>
+                
+                
+                <input id="switch_default" type="checkbox" class="switch_default">
+                <label for="switch_default" class="toggleBtn"></label>
+            </div>
+        </div>
+    </nav>
+
+    
+    <nav class="navbar-mobile" id="nav-mobile">
+        <div class="container">
+            <div class="navbar-header">
+                <div>
+                    <a href="/">Xiuzz&#39;s Blog</a><a id="mobile-toggle-theme">·&nbsp;Light</a>
+                </div>
+                <div class="menu-toggle" onclick="mobileBtn()">
+                    <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"><path fill="currentColor" d="M4.5 17.27q-.213 0-.356-.145T4 16.768t.144-.356t.356-.143h15q.213 0 .356.144q.144.144.144.357t-.144.356t-.356.143zm0-4.77q-.213 0-.356-.144T4 11.999t.144-.356t.356-.143h15q.213 0 .356.144t.144.357t-.144.356t-.356.143zm0-4.77q-.213 0-.356-.143Q4 7.443 4 7.23t.144-.356t.356-.143h15q.213 0 .356.144T20 7.23t-.144.356t-.356.144z"/></svg>
+                    <svg class="close-icon" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"><!-- Icon from Material Symbols Light by Google - https://github.com/google/material-design-icons/blob/master/LICENSE --><path fill="currentColor" d="m12 12.708l-5.246 5.246q-.14.14-.344.15t-.364-.15t-.16-.354t.16-.354L11.292 12L6.046 6.754q-.14-.14-.15-.344t.15-.364t.354-.16t.354.16L12 11.292l5.246-5.246q.14-.14.345-.15q.203-.01.363.15t.16.354t-.16.354L12.708 12l5.246 5.246q.14.14.15.345q.01.203-.15.363t-.354.16t-.354-.16z"/></svg>
+                </div>
+            </div>
+            <div class="menu" id="mobile-menu">
+                
+                <a class="menu-item" href="/archives">Posts</a>
+                
+                <a class="menu-item" href="/categories">Categories</a>
+                
+                <a class="menu-item" href="/tags">Tags</a>
+                
+                <a class="menu-item" href="/about">About</a>
+                
+            </div>
+        </div>
+    </nav>
+
+</header>
+<script>
+    var mobileBtn = function f() {
+        var toggleMenu = document.getElementsByClassName("menu-toggle")[0];
+        var mobileMenu = document.getElementById("mobile-menu");
+        if (toggleMenu.classList.contains("active")) {
+            toggleMenu.classList.remove("active")
+            mobileMenu.classList.remove("active")
+        } else {
+            toggleMenu.classList.add("active")
+            mobileMenu.classList.add("active")
+        }
+    }
+</script>
+            <div class="main">
+                <div class="container">
+    
+    
+        <div class="post-toc">
+    <div class="tocbot-list">
+    </div>
+    <div class="tocbot-list-menu">
+        <a class="tocbot-toc-expand" onclick="expand_toc()">Expand all</a>
+        <a onclick="go_top()">Back to top</a>
+        <a onclick="go_bottom()">Go to bottom</a>
+    </div>
+</div>
+
+<script>
+    var tocbot_timer;
+    var DEPTH_MAX = 6; // 为 6 时展开所有
+    var tocbot_default_config = {
+        tocSelector: '.tocbot-list',
+        contentSelector: '.post-content',
+        headingSelector: 'h1, h2, h3, h4, h5',
+        orderedList: false,
+        scrollSmooth: true,
+        onClick: extend_click,
+    };
+
+    function extend_click() {
+        clearTimeout(tocbot_timer);
+        tocbot_timer = setTimeout(function() {
+            tocbot.refresh(obj_merge(tocbot_default_config, {
+                hasInnerContainers: true
+            }));
+        }, 420); // 这个值是由 tocbot 源码里定义的 scrollSmoothDuration 得来的
+    }
+
+    document.ready(function() {
+        tocbot.init(obj_merge(tocbot_default_config, {
+            collapseDepth: 1
+        }));
+    });
+
+    function expand_toc() {
+        var b = document.querySelector('.tocbot-toc-expand');
+        var expanded = b.getAttribute('data-expanded');
+        expanded ? b.removeAttribute('data-expanded') : b.setAttribute('data-expanded', true);
+        tocbot.refresh(obj_merge(tocbot_default_config, {
+            collapseDepth: expanded ? 1 : DEPTH_MAX
+        }));
+        b.innerText = expanded ? 'Expand all' : 'Collapse all';
+    }
+
+    function go_top() {
+        window.scrollTo(0, 0);
+    }
+
+    function go_bottom() {
+        window.scrollTo(0, document.body.scrollHeight);
+    }
+
+    function obj_merge(target, source) {
+        for (var item in source) {
+            if (source.hasOwnProperty(item)) {
+                target[item] = source[item];
+            }
+        }
+        return target;
+    }
+</script>
+    
+
+    
+    <article class="post-wrap">
+        <header class="post-header">
+            <h1 class="post-title">Hermes Agent 接入微信 ClawBot 实操指南</h1>
+            
+                <div class="post-meta">
+                    
+                        Author: <a itemprop="author" rel="author" href="/">xiuzz</a>
+                    
+
+                    
+                        <span class="post-time">
+                        Date: <a href="#">六月 14, 2026&nbsp;&nbsp;0:00:00</a>
+                        </span>
+                    
+                    
+                        <span class="post-category">
+                    Category:
+                            
+                                <a href="/categories/ai/">ai</a>
+                            
+                        </span>
+                    
+                </div>
+            
+        </header>
+
+        <div class="post-content">
+            <h2 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h2><p><a target="_blank" rel="noopener" href="https://github.com/NousResearch/hermes-agent">Hermes Agent</a> 是 Nous Research 在 2026 年 2 月发布的开源 AI Agent 框架，不到四个月狂揽 100k+ GitHub stars，目前是 OpenRouter 上 token 消耗量最大的 Agent 项目。</p>
+<p>它的核心卖点：<strong>持久化记忆</strong> + <strong>自我进化技能系统</strong> + <strong>多平台接入</strong>，不像 Claude Code 这类会话结束后就”失忆”的工具，Hermes 会在本地积累技能和记忆，越用越强。</p>
+<p>微信接入方面，腾讯在 2026 年初开放了 <strong>iLink Bot API</strong>（俗称 ClawBot &#x2F; 龙虾插件），允许个人微信号以官方协议接入 Bot 服务。Hermes 从 v0.6.0 开始原生支持这个协议，到 v0.9.0 已经相当成熟。</p>
+<p>本文将走一遍从零部署到微信接入的完整流程。</p>
+<h2 id="架构总览"><a href="#架构总览" class="headerlink" title="架构总览"></a>架构总览</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">你的微信 App</span><br><span class="line">    ↕ iLink Bot API (腾讯官方)</span><br><span class="line">https://ilinkai.weixin.qq.com</span><br><span class="line">    ↕ HTTP Long Polling (35s 超时)</span><br><span class="line">Hermes Gateway → weixin adapter</span><br><span class="line">    ↕ MessageEvent</span><br><span class="line">Hermes Agent Core (推理 &amp; 工具调用)</span><br></pre></td></tr></table></figure>
+
+<p>几个关键点：</p>
+<ul>
+<li><strong>不需要公网 IP</strong>，不需要配 Webhook 回调地址，iLink 走客户端主动 Long Polling 拉消息</li>
+<li><strong>不需要 WebSocket</strong>，纯 HTTP，家庭宽带 &#x2F; 手机热点都能跑</li>
+<li><strong>消息加密</strong>：图片和文件走 CDN + AES-128-ECB，adapter 自动加解密，无需手动处理</li>
+</ul>
+<h2 id="部署-Hermes-Agent"><a href="#部署-Hermes-Agent" class="headerlink" title="部署 Hermes Agent"></a>部署 Hermes Agent</h2><h3 id="环境要求"><a href="#环境要求" class="headerlink" title="环境要求"></a>环境要求</h3><ul>
+<li>Python 3.10 ~ 3.12</li>
+<li>一台能联网的机器（Linux &#x2F; macOS &#x2F; WSL2 均可，最低 $5&#x2F;月的 VPS 就够）</li>
+<li>一个微信小号（强烈建议先用小号测试，不要直接上主力号）</li>
+</ul>
+<h3 id="安装"><a href="#安装" class="headerlink" title="安装"></a>安装</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash</span><br></pre></td></tr></table></figure>
+
+<p>安装完成后验证版本：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">hermes --version</span><br><span class="line"><span class="comment"># 建议 &gt;= v0.6.0，推荐 v0.9.0+</span></span><br></pre></td></tr></table></figure>
+
+<p>如果版本过低，先升级：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">hermes update</span><br></pre></td></tr></table></figure>
+
+<h3 id="配置模型"><a href="#配置模型" class="headerlink" title="配置模型"></a>配置模型</h3><p>在 <code>~/.hermes/.env</code> 中配置你的 LLM provider：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"># 示例：用 DeepSeek</span><br><span class="line">LLM_PROVIDER=deepseek</span><br><span class="line">LLM_MODEL=deepseek-chat</span><br><span class="line">LLM_API_KEY=sk-your-key-here</span><br><span class="line"></span><br><span class="line"># 也可以用 Anthropic</span><br><span class="line"># LLM_PROVIDER=anthropic</span><br><span class="line"># LLM_MODEL=claude-sonnet-4-6</span><br><span class="line"># LLM_API_KEY=sk-ant-your-key-here</span><br></pre></td></tr></table></figure>
+
+<p>Hermes 支持 200+ 模型供应商，国内厂商（DeepSeek、智谱、MiniMax、豆包、Kimi 等）都可以直接用。</p>
+<h2 id="接入微信-ClawBot"><a href="#接入微信-ClawBot" class="headerlink" title="接入微信 ClawBot"></a>接入微信 ClawBot</h2><h3 id="Step-1-安装依赖"><a href="#Step-1-安装依赖" class="headerlink" title="Step 1: 安装依赖"></a>Step 1: 安装依赖</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">pip install aiohttp cryptography qrcode pillow</span><br></pre></td></tr></table></figure>
+
+<h3 id="Step-2-启动-Gateway-配置向导"><a href="#Step-2-启动-Gateway-配置向导" class="headerlink" title="Step 2: 启动 Gateway 配置向导"></a>Step 2: 启动 Gateway 配置向导</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">hermes gateway setup</span><br></pre></td></tr></table></figure>
+
+<p>在交互菜单中选择 <strong>Weixin</strong>（或 “WeChat (iLink &#x2F; ClawBot)”），随后终端会打印一个二维码。</p>
+<h3 id="Step-3-扫码登录"><a href="#Step-3-扫码登录" class="headerlink" title="Step 3: 扫码登录"></a>Step 3: 扫码登录</h3><p>打开手机微信，扫描终端上的二维码，在手机上确认登录。</p>
+<p>扫码成功后，终端会输出类似以下信息：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">[Gateway] Weixin login success</span><br><span class="line">  account_id: wxid_xxxxxxxx</span><br><span class="line">  nickname:   MyBot</span><br></pre></td></tr></table></figure>
+
+<p>此时 iLink 的 <code>context_token</code> 会持久化到本地 <code>~/.hermes/</code> 目录下，后续启动无需重新扫码（token 有效期约 24 小时，adapter 会自动续期，最多续 3 次）。</p>
+<h3 id="Step-4-配置访问策略"><a href="#Step-4-配置访问策略" class="headerlink" title="Step 4: 配置访问策略"></a>Step 4: 配置访问策略</h3><p>编辑 <code>~/.hermes/.env</code>，添加微信相关配置：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">WEIXIN_ACCOUNT_ID=wxid_xxxxxxxx    # 从上一步获取</span><br><span class="line">WEIXIN_TOKEN=your-bot-token        # 从上一步获取</span><br><span class="line">WEIXIN_BASE_URL=https://ilinkai.weixin.qq.com</span><br><span class="line"></span><br><span class="line"># DM 策略: open(所有人) | allowlist(白名单) | pairing(配对确认) | disabled(关闭)</span><br><span class="line">WEIXIN_DM_POLICY=pairing</span><br><span class="line"></span><br><span class="line"># 群聊策略: 建议先关闭，群聊支持目前还是实验性的</span><br><span class="line">WEIXIN_GROUP_POLICY=disabled</span><br></pre></td></tr></table></figure>
+
+<p>推荐用 <code>pairing</code> 模式——只有你通过 <code>hermes pairing approve</code> 批准过的用户才能和 Bot 对话。</p>
+<h3 id="Step-5-启动-Gateway"><a href="#Step-5-启动-Gateway" class="headerlink" title="Step 5: 启动 Gateway"></a>Step 5: 启动 Gateway</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">hermes gateway start</span><br></pre></td></tr></table></figure>
+
+<p>看到 <code>[Gateway] Weixin platform connected</code> 即表示接入成功。</p>
+<p>在微信联系人列表中找到 <strong>“微信Clawbot”</strong>（或搜索 “ClawBot”），发消息测试：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">用户: 你好，你是谁？</span><br><span class="line">Bot:  我是 Hermes Agent，运行在 Nous Research 框架上...</span><br></pre></td></tr></table></figure>
+
+<h3 id="Step-6-授权用户（pairing-模式）"><a href="#Step-6-授权用户（pairing-模式）" class="headerlink" title="Step 6: 授权用户（pairing 模式）"></a>Step 6: 授权用户（pairing 模式）</h3><p>如果是 pairing 模式，新用户首次发消息会被拦截。批准用户：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">hermes pairing approve weixin &lt;CODE&gt;</span><br></pre></td></tr></table></figure>
+
+<p><code>&lt;CODE&gt;</code> 会显示在 Gateway 日志中，用户也会收到提示消息告知配对码。</p>
+<h2 id="iLink-协议细节"><a href="#iLink-协议细节" class="headerlink" title="iLink 协议细节"></a>iLink 协议细节</h2><p>这一节写给想深入了解协议栈的读者。如果只想跑起来，跳过即可。</p>
+<h3 id="消息获取：Long-Polling"><a href="#消息获取：Long-Polling" class="headerlink" title="消息获取：Long Polling"></a>消息获取：Long Polling</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 伪代码，展示 iLink 长轮询的核心逻辑</span></span><br><span class="line"><span class="keyword">async</span> <span class="keyword">def</span> <span class="title function_">poll_loop</span>():</span><br><span class="line">    <span class="keyword">while</span> <span class="literal">True</span>:</span><br><span class="line">        <span class="keyword">try</span>:</span><br><span class="line">            updates = <span class="keyword">await</span> http_post(</span><br><span class="line">                <span class="string">f&quot;<span class="subst">&#123;BASE_URL&#125;</span>/bot/getUpdates&quot;</span>,</span><br><span class="line">                headers=&#123;<span class="string">&quot;Authorization&quot;</span>: <span class="string">f&quot;Bearer <span class="subst">&#123;token&#125;</span>&quot;</span>&#125;,</span><br><span class="line">                json=&#123;<span class="string">&quot;context_token&quot;</span>: ctx_token&#125;,</span><br><span class="line">                timeout=<span class="number">35</span>  <span class="comment"># iLink 建议 35s</span></span><br><span class="line">            )</span><br><span class="line">            <span class="keyword">for</span> msg <span class="keyword">in</span> updates[<span class="string">&quot;messages&quot;</span>]:</span><br><span class="line">                <span class="keyword">await</span> handle_message(msg)</span><br><span class="line">            ctx_token = updates.get(<span class="string">&quot;context_token&quot;</span>, ctx_token)</span><br><span class="line">        <span class="keyword">except</span> TimeoutError:</span><br><span class="line">            <span class="keyword">continue</span>  <span class="comment"># 35s 超时是正常的，立即发起下一次轮询</span></span><br></pre></td></tr></table></figure>
+
+<p>iLink 的 Long Polling 超时时间建议设为 35 秒。超时后客户端应立即发起下一次请求，服务端会在有新消息时立即返回，否则 hold 到超时。</p>
+<h3 id="消息结构"><a href="#消息结构" class="headerlink" title="消息结构"></a>消息结构</h3><figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span></span><br><span class="line">  <span class="attr">&quot;message_id&quot;</span><span class="punctuation">:</span> <span class="string">&quot;msg_xxxx&quot;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;from_user&quot;</span><span class="punctuation">:</span> <span class="string">&quot;wxid_xxxx&quot;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;type&quot;</span><span class="punctuation">:</span> <span class="string">&quot;text&quot;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;content&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">    <span class="attr">&quot;text&quot;</span><span class="punctuation">:</span> <span class="string">&quot;你好&quot;</span></span><br><span class="line">  <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;timestamp&quot;</span><span class="punctuation">:</span> <span class="number">1718340000</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;chat_type&quot;</span><span class="punctuation">:</span> <span class="string">&quot;dm&quot;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;context_token&quot;</span><span class="punctuation">:</span> <span class="string">&quot;ctx_xxxx&quot;</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="媒体文件解密"><a href="#媒体文件解密" class="headerlink" title="媒体文件解密"></a>媒体文件解密</h3><p>图片和文件存储在微信 CDN 上，传输层使用 <strong>AES-128-ECB</strong> 加密。Hermes adapter 已经封装好了，调用侧无需关心。核心流程：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">1. 收到 media_id → GET /bot/getMedia → 获取加密的二进制 + 加密 key</span><br><span class="line">2. AES-128-ECB 解密 → 原始文件</span><br><span class="line">3. 保存到本地缓存目录（~/.hermes/cache/media/）</span><br></pre></td></tr></table></figure>
+
+<h3 id="消息去重"><a href="#消息去重" class="headerlink" title="消息去重"></a>消息去重</h3><p>iLink 在极端情况下可能推送重复消息。Hermes adapter 用 5 分钟滑动窗口做幂等：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">seen_ids: Deque[<span class="built_in">tuple</span>[<span class="built_in">str</span>, <span class="built_in">float</span>]] = deque(maxlen=<span class="number">1000</span>)</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">is_duplicate</span>(<span class="params">msg_id: <span class="built_in">str</span></span>) -&gt; <span class="built_in">bool</span>:</span><br><span class="line">    now = time.time()</span><br><span class="line">    <span class="comment"># 清理 5 分钟前的记录</span></span><br><span class="line">    <span class="keyword">while</span> seen_ids <span class="keyword">and</span> now - seen_ids[<span class="number">0</span>][<span class="number">1</span>] &gt; <span class="number">300</span>:</span><br><span class="line">        seen_ids.popleft()</span><br><span class="line">    <span class="keyword">for</span> sid, _ <span class="keyword">in</span> seen_ids:</span><br><span class="line">        <span class="keyword">if</span> sid == msg_id:</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">True</span></span><br><span class="line">    seen_ids.append((msg_id, now))</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">False</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="功能支持一览"><a href="#功能支持一览" class="headerlink" title="功能支持一览"></a>功能支持一览</h2><table>
+<thead>
+<tr>
+<th>功能</th>
+<th>状态</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>文本消息</td>
+<td>✅</td>
+<td>超过 4000 字自动分段发送</td>
+</tr>
+<tr>
+<td>图片收发</td>
+<td>✅</td>
+<td>AES-128-ECB 自动加解密</td>
+</tr>
+<tr>
+<td>视频接收</td>
+<td>✅</td>
+<td>缓存为 .mp4</td>
+</tr>
+<tr>
+<td>语音转文字</td>
+<td>✅</td>
+<td>使用 iLink 内置的 <code>voice_item.text</code></td>
+</tr>
+<tr>
+<td>文件收发</td>
+<td>✅</td>
+<td>保留原始文件名</td>
+</tr>
+<tr>
+<td>引用回复</td>
+<td>✅</td>
+<td>支持引用消息</td>
+</tr>
+<tr>
+<td>群聊</td>
+<td>⚠️</td>
+<td>基础支持，暂不能识别 @提及</td>
+</tr>
+<tr>
+<td>Markdown</td>
+<td>❌</td>
+<td>微信不支持，自动转纯文本</td>
+</tr>
+<tr>
+<td>发送语音</td>
+<td>❌</td>
+<td>iLink API 限制</td>
+</tr>
+<tr>
+<td>表情&#x2F;贴纸</td>
+<td>❌</td>
+<td>API 不支持</td>
+</tr>
+</tbody></table>
+<h2 id="进阶玩法"><a href="#进阶玩法" class="headerlink" title="进阶玩法"></a>进阶玩法</h2><h3 id="HermesClaw：一个微信号跑多个-Agent"><a href="#HermesClaw：一个微信号跑多个-Agent" class="headerlink" title="HermesClaw：一个微信号跑多个 Agent"></a>HermesClaw：一个微信号跑多个 Agent</h3><p><a target="_blank" rel="noopener" href="https://github.com/AaronWong1999/hermesclaw">HermesClaw</a> 是一个有趣的社区项目——它作为唯一的 iLink 轮询器，启动本地代理服务器，让多个 Agent 共享同一个微信号：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">iLink API</span><br><span class="line">    ↓ (唯一轮询器)</span><br><span class="line">HermesClaw Proxy</span><br><span class="line">    ├── :19999 → OpenClaw Gateway</span><br><span class="line">    ├── :19998 → Hermes Gateway</span><br><span class="line">    └── ACP Bridge → OpenCode</span><br></pre></td></tr></table></figure>
+
+<p>通过命令前缀切换 Agent：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">/hermes    → 切到 Hermes Agent</span><br><span class="line">/openclaw  → 切到 OpenClaw</span><br><span class="line">/opencode  → 切到 OpenCode（语音 Vibe Coding）</span><br><span class="line">/both      → Hermes + OpenClaw 同时回复</span><br></pre></td></tr></table></figure>
+
+<h3 id="Skills-自动化"><a href="#Skills-自动化" class="headerlink" title="Skills 自动化"></a>Skills 自动化</h3><p>Hermes 的核心能力是 <strong>自我进化</strong>——当完成一个涉及 5 个以上工具调用、或包含错误修正、或收到用户反馈的任务后，它会自动生成一个 Skill 文件存入 <code>~/.hermes/skills/</code>。下次遇到类似任务时直接调用，效率提升 3-10x。</p>
+<p>比如接入微信这整个流程，理论上跑过一次后 Hermes 就能自动沉淀成 Skill，以后换机器部署直接复用。</p>
+<h2 id="常见问题"><a href="#常见问题" class="headerlink" title="常见问题"></a>常见问题</h2><p><strong>Q: 扫码登录后多久会过期？</strong></p>
+<p>iLink token 有效期约 24 小时，adapter 会自动续期（最多续 3 次）。如果长时间未启动 Gateway，需要重新扫码。</p>
+<p><strong>Q: 会被封号吗？</strong></p>
+<p>iLink 是腾讯官方开放的协议，相比非官方的 iPad 协议或 Web 微信协议安全得多。但个人微信号的 Bot 策略可能会有调整，建议用小号测试，不要用主力号。</p>
+<p><strong>Q: 能同时登多个微信号吗？</strong></p>
+<p>Hermes 原生不支持多账号。如果需要，可以看社区项目 <a target="_blank" rel="noopener" href="https://github.com/DBAAZzz/easy-weixin-clawbot">easy-weixin-clawbot</a>，它通过 Web 后台管理多个微信号。</p>
+<p><strong>Q: 消息延迟大吗？</strong></p>
+<p>Long Polling 模式下，消息到达延迟通常在 1-3 秒。加上 AI 推理时间，总延迟取决于你用的模型速度。</p>
+<h2 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h2><p>Hermes Agent + 微信 ClawBot 是目前个人搭建 AI 微信助手最顺畅的方案——官方协议、无需公网 IP、扫码即用。配合 Hermes 的记忆系统和自我进化能力，它会随着使用越来越懂你的需求。</p>
+<p>部署链路总结：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">pip install 依赖 → hermes gateway setup → 扫码 → 配策略 → hermes gateway start → 微信聊天</span><br></pre></td></tr></table></figure>
+
+<p>十分钟搞定。</p>
+
+        </div>
+
+        
+            <section class="post-copyright">
+                
+                    <p class="copyright-item">
+                        <span>Author:</span>
+                        <span>xiuzz</span>
+                    </p>
+                
+                
+                    <p class="copyright-item">
+                        <span>Permalink:</span>
+                        <span><a href="https://xiuzz.github.io/2026/06/14/hermes-wechat-integration/">https://xiuzz.github.io/2026/06/14/hermes-wechat-integration/</a></span>
+                    </p>
+                
+                
+                    <p class="copyright-item">
+                        <span>License:</span>
+                        <span>Copyright (c) 2019 <a target="_blank" rel="noopener" href="http://creativecommons.org/licenses/by-nc/4.0/">CC-BY-NC-4.0</a> LICENSE</span>
+                    </p>
+                
+                
+                     <p class="copyright-item">
+                         <span>Slogan:</span>
+                         <span>Do you believe in <strong>DESTINY</strong>?</span>
+                     </p>
+                
+
+            </section>
+        
+        <section class="post-tags">
+            <div>
+                <span>Tag(s):</span>
+                <span class="tag">
+                    
+                    
+                        <a href="/tags/Hermes/"># Hermes</a>
+                    
+                        <a href="/tags/Agent/"># Agent</a>
+                    
+                        <a href="/tags/%E5%BE%AE%E4%BF%A1/"># 微信</a>
+                    
+                        <a href="/tags/ClawBot/"># ClawBot</a>
+                    
+                        <a href="/tags/iLink/"># iLink</a>
+                    
+                        <a href="/tags/Bot/"># Bot</a>
+                    
+                        
+                </span>
+            </div>
+            <div>
+                <a href="javascript:window.history.back();">back</a>
+                <span>· </span>
+                <a href="/">home</a>
+            </div>
+        </section>
+        <section class="post-nav">
+            
+            
+            <a class="next" rel="next" href="/2026/06/13/udp-source-code-analysis/">Linux UDP 协议栈源码解析</a>
+            
+        </section>
+
+
+    </article>
+</div>
+
+            </div>
+            <footer id="footer" class="footer">
+    <div class="copyright">
+        <span>© xiuzz | Powered by <a href="https://hexo.io" target="_blank">Hexo</a> & <a href="https://github.com/Siricee/hexo-theme-Chic" target="_blank">Chic</a></span>
+    </div>
+</footer>
+
+    </div>
+</body>
+
+</html>

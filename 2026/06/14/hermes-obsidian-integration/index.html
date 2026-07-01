@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <meta name="author" content="xiuzz">
+
+
+
+
+
+<title>Hermes + Obsidian 联动：让 AI Agent 拥有持久记忆 | Xiuzz&#39;s Blog</title>
+
+
+
+    <link rel="icon" href="/favicon.ico">
+
+
+
+
+    <!-- stylesheets list from _config.yml -->
+    
+    <link rel="stylesheet" href="/css/style.css">
+    
+
+
+
+    <!-- scripts list from _config.yml -->
+    
+    <script src="/js/script.js"></script>
+    
+    <script src="/js/tocbot.min.js"></script>
+    
+
+
+
+    
+    
+        
+    
+
+
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+<body>
+    <script>
+        // this function is used to check current theme before page loaded.
+        (() => {
+            const pagebody = document.getElementsByTagName('body')[0]
+
+            function setTheme(status) {
+
+                if (status === 'dark') {
+                    window.sessionStorage.theme = 'dark'
+                    pagebody.classList.add('dark-theme');
+
+                } else if (status === 'light') {
+                    window.sessionStorage.theme = 'light'
+                    pagebody.classList.remove('dark-theme');
+                }
+            };
+
+            setTheme(window.sessionStorage.theme)
+        })();
+    </script>
+
+    <div class="wrapper">
+        <header>
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-header header-logo"><a href="/">Xiuzz&#39;s Blog</a></div>
+            <div class="menu navbar-right">
+                
+                <a class="menu-item" href="/archives">Posts</a>
+                
+                <a class="menu-item" href="/categories">Categories</a>
+                
+                <a class="menu-item" href="/tags">Tags</a>
+                
+                <a class="menu-item" href="/about">About</a>
+                
+                
+                <input id="switch_default" type="checkbox" class="switch_default">
+                <label for="switch_default" class="toggleBtn"></label>
+            </div>
+        </div>
+    </nav>
+
+    
+    <nav class="navbar-mobile" id="nav-mobile">
+        <div class="container">
+            <div class="navbar-header">
+                <div>
+                    <a href="/">Xiuzz&#39;s Blog</a><a id="mobile-toggle-theme">·&nbsp;Light</a>
+                </div>
+                <div class="menu-toggle" onclick="mobileBtn()">
+                    <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"><path fill="currentColor" d="M4.5 17.27q-.213 0-.356-.145T4 16.768t.144-.356t.356-.143h15q.213 0 .356.144q.144.144.144.357t-.144.356t-.356.143zm0-4.77q-.213 0-.356-.144T4 11.999t.144-.356t.356-.143h15q.213 0 .356.144t.144.357t-.144.356t-.356.143zm0-4.77q-.213 0-.356-.143Q4 7.443 4 7.23t.144-.356t.356-.143h15q.213 0 .356.144T20 7.23t-.144.356t-.356.144z"/></svg>
+                    <svg class="close-icon" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"><!-- Icon from Material Symbols Light by Google - https://github.com/google/material-design-icons/blob/master/LICENSE --><path fill="currentColor" d="m12 12.708l-5.246 5.246q-.14.14-.344.15t-.364-.15t-.16-.354t.16-.354L11.292 12L6.046 6.754q-.14-.14-.15-.344t.15-.364t.354-.16t.354.16L12 11.292l5.246-5.246q.14-.14.345-.15q.203-.01.363.15t.16.354t-.16.354L12.708 12l5.246 5.246q.14.14.15.345q.01.203-.15.363t-.354.16t-.354-.16z"/></svg>
+                </div>
+            </div>
+            <div class="menu" id="mobile-menu">
+                
+                <a class="menu-item" href="/archives">Posts</a>
+                
+                <a class="menu-item" href="/categories">Categories</a>
+                
+                <a class="menu-item" href="/tags">Tags</a>
+                
+                <a class="menu-item" href="/about">About</a>
+                
+            </div>
+        </div>
+    </nav>
+
+</header>
+<script>
+    var mobileBtn = function f() {
+        var toggleMenu = document.getElementsByClassName("menu-toggle")[0];
+        var mobileMenu = document.getElementById("mobile-menu");
+        if (toggleMenu.classList.contains("active")) {
+            toggleMenu.classList.remove("active")
+            mobileMenu.classList.remove("active")
+        } else {
+            toggleMenu.classList.add("active")
+            mobileMenu.classList.add("active")
+        }
+    }
+</script>
+            <div class="main">
+                <div class="container">
+    
+    
+        <div class="post-toc">
+    <div class="tocbot-list">
+    </div>
+    <div class="tocbot-list-menu">
+        <a class="tocbot-toc-expand" onclick="expand_toc()">Expand all</a>
+        <a onclick="go_top()">Back to top</a>
+        <a onclick="go_bottom()">Go to bottom</a>
+    </div>
+</div>
+
+<script>
+    var tocbot_timer;
+    var DEPTH_MAX = 6; // 为 6 时展开所有
+    var tocbot_default_config = {
+        tocSelector: '.tocbot-list',
+        contentSelector: '.post-content',
+        headingSelector: 'h1, h2, h3, h4, h5',
+        orderedList: false,
+        scrollSmooth: true,
+        onClick: extend_click,
+    };
+
+    function extend_click() {
+        clearTimeout(tocbot_timer);
+        tocbot_timer = setTimeout(function() {
+            tocbot.refresh(obj_merge(tocbot_default_config, {
+                hasInnerContainers: true
+            }));
+        }, 420); // 这个值是由 tocbot 源码里定义的 scrollSmoothDuration 得来的
+    }
+
+    document.ready(function() {
+        tocbot.init(obj_merge(tocbot_default_config, {
+            collapseDepth: 1
+        }));
+    });
+
+    function expand_toc() {
+        var b = document.querySelector('.tocbot-toc-expand');
+        var expanded = b.getAttribute('data-expanded');
+        expanded ? b.removeAttribute('data-expanded') : b.setAttribute('data-expanded', true);
+        tocbot.refresh(obj_merge(tocbot_default_config, {
+            collapseDepth: expanded ? 1 : DEPTH_MAX
+        }));
+        b.innerText = expanded ? 'Expand all' : 'Collapse all';
+    }
+
+    function go_top() {
+        window.scrollTo(0, 0);
+    }
+
+    function go_bottom() {
+        window.scrollTo(0, document.body.scrollHeight);
+    }
+
+    function obj_merge(target, source) {
+        for (var item in source) {
+            if (source.hasOwnProperty(item)) {
+                target[item] = source[item];
+            }
+        }
+        return target;
+    }
+</script>
+    
+
+    
+    <article class="post-wrap">
+        <header class="post-header">
+            <h1 class="post-title">Hermes + Obsidian 联动：让 AI Agent 拥有持久记忆</h1>
+            
+                <div class="post-meta">
+                    
+                        Author: <a itemprop="author" rel="author" href="/">xiuzz</a>
+                    
+
+                    
+                        <span class="post-time">
+                        Date: <a href="#">六月 14, 2026&nbsp;&nbsp;0:00:00</a>
+                        </span>
+                    
+                    
+                        <span class="post-category">
+                    Category:
+                            
+                                <a href="/categories/ai/">ai</a>
+                            
+                        </span>
+                    
+                </div>
+            
+        </header>
+
+        <div class="post-content">
+            <h2 id="为什么需要这个联动"><a href="#为什么需要这个联动" class="headerlink" title="为什么需要这个联动"></a>为什么需要这个联动</h2><p>AI Agent 最大的痛点：<strong>会话结束，记忆清零</strong>。每次新开对话都要重新交代背景、偏好、项目结构。Hermes Agent 的设计目标之一就是解决这个问题，而 Obsidian 在其中扮演”持久记忆层”的角色——所有对话上下文、研究成果、决策记录都存在本地 Markdown 文件里，不依赖任何云服务。</p>
+<p>核心逻辑很简单：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">你的任务 → Hermes Agent 推理执行</span><br><span class="line">              ↓ 读/写</span><br><span class="line">         Obsidian Vault (本地 Markdown)</span><br><span class="line">              ↓ 可视化</span><br><span class="line">         Obsidian App (图谱/搜索/编辑)</span><br></pre></td></tr></table></figure>
+
+<h2 id="环境准备"><a href="#环境准备" class="headerlink" title="环境准备"></a>环境准备</h2><ul>
+<li>Hermes Agent ≥ v0.13（推荐 v0.14+）</li>
+<li>Obsidian（桌面端或移动端均可，但 vault 路径要对）</li>
+<li>macOS &#x2F; Linux &#x2F; WSL2 均可</li>
+</ul>
+<h2 id="Step-1-配置-Vault-路径"><a href="#Step-1-配置-Vault-路径" class="headerlink" title="Step 1: 配置 Vault 路径"></a>Step 1: 配置 Vault 路径</h2><p>Hermes 通过 <code>OBSIDIAN_VAULT_PATH</code> 环境变量找到你的 Obsidian vault。</p>
+<p>编辑 <code>~/.hermes/.env</code>：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># macOS（iCloud vault 示例）</span></span><br><span class="line"><span class="built_in">export</span> OBSIDIAN_VAULT_PATH=<span class="string">&quot;/Users/xiu/Library/Mobile Documents/iCloud~md~obsidian/Documents/my-vault&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Linux / WSL2</span></span><br><span class="line"><span class="built_in">export</span> OBSIDIAN_VAULT_PATH=<span class="string">&quot;/home/xiu/vaults/knowledge&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Windows（在 WSL2 内访问宿主机 Obsidian）</span></span><br><span class="line"><span class="built_in">export</span> OBSIDIAN_VAULT_PATH=<span class="string">&quot;/mnt/d/obsidian_work/knowledge&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>也可以让 Hermes 自己来配置：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">hermes memory setup --provider obsidian --path ~/vaults/knowledge</span><br><span class="line">hermes memory status   <span class="comment"># 验证配置是否生效</span></span><br></pre></td></tr></table></figure>
+
+<p>重启 Hermes 后生效。</p>
+<h2 id="Step-2-内置-Obsidian-Skill"><a href="#Step-2-内置-Obsidian-Skill" class="headerlink" title="Step 2: 内置 Obsidian Skill"></a>Step 2: 内置 Obsidian Skill</h2><p>Hermes 自带 <code>obsidian</code> skill，开箱即用。它可以直接：</p>
+<ul>
+<li><strong>读取笔记</strong> — “帮我总结 vault 里关于分布式系统的笔记”</li>
+<li><strong>创建&#x2F;编辑笔记</strong> — “把刚才讨论的 Raft 选举流程写成笔记”</li>
+<li><strong>搜索知识库</strong> — “搜索笔记里所有关于 QUIC 的内容”</li>
+<li><strong>建立双向链接</strong> — 自动在笔记间建立 <code>[[wikilinks]]</code></li>
+</ul>
+<p>不需要安装任何 Obsidian 社区插件，Hermes 直接读写文件系统上的 Markdown 文件。Obsidian 应用甚至不需要开着——文件变了，下次打开 Obsidian 就能看到更新。</p>
+<h2 id="Step-3-LLM-Wiki-——-让知识自己生长"><a href="#Step-3-LLM-Wiki-——-让知识自己生长" class="headerlink" title="Step 3: LLM Wiki —— 让知识自己生长"></a>Step 3: LLM Wiki —— 让知识自己生长</h2><p>这是 Hermes v0.14 最亮眼的功能：<code>llm-wiki</code> skill。它不同于传统的 RAG（检索增强生成），而是<strong>让 Agent 自己维护一个结构化 Wiki</strong>。</p>
+<h3 id="三层架构"><a href="#三层架构" class="headerlink" title="三层架构"></a>三层架构</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">wiki/</span><br><span class="line">├── SCHEMA.md          # 结构约定、标签体系</span><br><span class="line">├── index.md           # 内容目录（带单行摘要）</span><br><span class="line">├── log.md             # 按时间顺序的操作日志</span><br><span class="line">├── raw/               # Layer 1: 原始材料（只读）</span><br><span class="line">│   ├── articles/      #   网页文章</span><br><span class="line">│   ├── papers/        #   论文 PDF</span><br><span class="line">│   └── transcripts/   #   会议记录</span><br><span class="line">├── entities/          # Layer 2: 实体页面</span><br><span class="line">├── concepts/          # Layer 2: 概念/主题页面</span><br><span class="line">├── comparisons/       # Layer 2: 对比分析</span><br><span class="line">└── queries/           # Layer 2: 有价值的查询结果</span><br></pre></td></tr></table></figure>
+
+<h3 id="三种核心操作"><a href="#三种核心操作" class="headerlink" title="三种核心操作"></a>三种核心操作</h3><p><strong>收录（Ingest）</strong>：Agent 读取一篇来源 → 提取关键信息 → 创建&#x2F;更新多个 wiki 页面 → 添加交叉引用。一篇来源可能触发 5-15 个页面的更新，形成知识复利。</p>
+<p><strong>查询（Query）</strong>：Agent 先读 index.md 找到相关页面 → 阅读后综合回答 → 有价值的答案归档回 wiki，下次遇到同类问题直接命中。</p>
+<p><strong>健康检查（Lint）</strong>：定期扫描孤立页面、断链、过时内容、标签不一致等问题。</p>
+<h3 id="与-Obsidian-的天然契合"><a href="#与-Obsidian-的天然契合" class="headerlink" title="与 Obsidian 的天然契合"></a>与 Obsidian 的天然契合</h3><p>LLM Wiki 生成的是标准 Markdown + YAML frontmatter + <code>[[wikilinks]]</code>：</p>
+<ul>
+<li><strong>Graph View</strong> 直接可视化知识网络</li>
+<li><strong>Dataview 插件</strong> 可以查询 frontmatter 做动态列表</li>
+<li><strong>反向链接面板</strong> 显示哪些页面引用了当前页面</li>
+<li>人类可以随时手动编辑，Agent 会尊重已有内容</li>
+</ul>
+<h2 id="典型工作流"><a href="#典型工作流" class="headerlink" title="典型工作流"></a>典型工作流</h2><h3 id="场景一：研究新主题"><a href="#场景一：研究新主题" class="headerlink" title="场景一：研究新主题"></a>场景一：研究新主题</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">你: 帮我研究一下 HTTP/3 和 QUIC 的关系</span><br><span class="line"></span><br><span class="line">Hermes:</span><br><span class="line">  1. 搜索 web → 获取多篇来源</span><br><span class="line">  2. raw/articles/ 存入原文</span><br><span class="line">  3. entities/ 创建 QUIC、HTTP/3、UDP 等实体页</span><br><span class="line">  4. concepts/ 创建&quot;传输层演进&quot;概念页</span><br><span class="line">  5. comparisons/HTTP2-vs-HTTP3.md 做对比</span><br><span class="line">  6. index.md 更新目录</span><br><span class="line">  7. log.md 记录操作</span><br><span class="line"></span><br><span class="line">你打开 Obsidian → Graph View → 看到一个互联的知识子图</span><br></pre></td></tr></table></figure>
+
+<h3 id="场景二：代码审查归档"><a href="#场景二：代码审查归档" class="headerlink" title="场景二：代码审查归档"></a>场景二：代码审查归档</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">Hermes 调 Claude Code 完成代码审查</span><br><span class="line">    ↓</span><br><span class="line">审查报告 → Obsidian vault</span><br><span class="line">    ↓</span><br><span class="line">与项目笔记建立 [[双向链接]]</span><br><span class="line">    ↓</span><br><span class="line">下次审查时 Agent 自动引用历史上下文</span><br></pre></td></tr></table></figure>
+
+<h3 id="场景三：日常笔记自动整理"><a href="#场景三：日常笔记自动整理" class="headerlink" title="场景三：日常笔记自动整理"></a>场景三：日常笔记自动整理</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">你随手写了一条碎片笔记 → Obsidian</span><br><span class="line">    ↓</span><br><span class="line">Hermes 定期扫描 vault（llm-wiki lint）</span><br><span class="line">    ↓</span><br><span class="line">发现孤立笔记 → 建议归并/链接</span><br><span class="line">    ↓</span><br><span class="line">自动更新相关页面的&quot;相关内容&quot;section</span><br></pre></td></tr></table></figure>
+
+<h2 id="进阶：多-Agent-共享-Vault"><a href="#进阶：多-Agent-共享-Vault" class="headerlink" title="进阶：多 Agent 共享 Vault"></a>进阶：多 Agent 共享 Vault</h2><p>如果你同时用 Hermes、Claude Code、Cursor 等多个 AI 工具，可以用 <code>obsidian-wiki</code> 这个 Python 包让它们共享同一个 vault：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">pip install obsidian-wiki</span><br></pre></td></tr></table></figure>
+
+<p>它提供一个统一的读写接口，15+ 种 AI 工具都能往里存笔记。这样一来，你在 Claude Code 里写的代码分析、在 Cursor 里调出来的 bug 记录、在 Hermes 里生成的研究报告，全部汇入同一个 Obsidian vault。</p>
+<h2 id="避坑指南"><a href="#避坑指南" class="headerlink" title="避坑指南"></a>避坑指南</h2><table>
+<thead>
+<tr>
+<th>坑</th>
+<th>解法</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>WSL2 里 <code>$OBSIDIAN_VAULT_PATH</code> 不生效</td>
+<td>不要用环境变量占位符传给 file tool，要展开成绝对路径</td>
+</tr>
+<tr>
+<td>vault 路径有空格</td>
+<td>加引号包裹，或用 <code>\</code> 转义</td>
+</tr>
+<tr>
+<td>Hermes 写的文件 Obsidian 看不到</td>
+<td>检查文件是否在 <code>.obsidian/</code> 同级的 vault 根目录下</td>
+</tr>
+<tr>
+<td>iCloud vault 在 macOS 上的路径</td>
+<td><code>/Users/&lt;name&gt;/Library/Mobile Documents/iCloud~md~obsidian/Documents/&lt;vault-name&gt;</code></td>
+</tr>
+<tr>
+<td>vault 在移动硬盘上</td>
+<td>确认挂载点路径，避免 <code>/Volumes/</code> 下名称变动</td>
+</tr>
+</tbody></table>
+<h2 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h2><p>Hermes + Obsidian 的本质是<strong>把 Agent 的记忆从 API 调用栈里搬到文件系统上</strong>。这意味着：</p>
+<ul>
+<li>记忆不会随会话消失</li>
+<li>你可以随时手动编辑 Agent 的”大脑”</li>
+<li>所有数据都是本地 Markdown，不绑任何平台</li>
+<li>Obsidian 提供免费的可视化层（图谱、搜索、反向链接）</li>
+</ul>
+<p>配置只消一行 <code>OBSIDIAN_VAULT_PATH</code>，之后 Hermes 的 obsidian skill 和 llm-wiki skill 会自动接管知识管理。</p>
+
+        </div>
+
+        
+            <section class="post-copyright">
+                
+                    <p class="copyright-item">
+                        <span>Author:</span>
+                        <span>xiuzz</span>
+                    </p>
+                
+                
+                    <p class="copyright-item">
+                        <span>Permalink:</span>
+                        <span><a href="https://xiuzz.github.io/2026/06/14/hermes-obsidian-integration/">https://xiuzz.github.io/2026/06/14/hermes-obsidian-integration/</a></span>
+                    </p>
+                
+                
+                    <p class="copyright-item">
+                        <span>License:</span>
+                        <span>Copyright (c) 2019 <a target="_blank" rel="noopener" href="http://creativecommons.org/licenses/by-nc/4.0/">CC-BY-NC-4.0</a> LICENSE</span>
+                    </p>
+                
+                
+                     <p class="copyright-item">
+                         <span>Slogan:</span>
+                         <span>Do you believe in <strong>DESTINY</strong>?</span>
+                     </p>
+                
+
+            </section>
+        
+        <section class="post-tags">
+            <div>
+                <span>Tag(s):</span>
+                <span class="tag">
+                    
+                    
+                        <a href="/tags/Hermes/"># Hermes</a>
+                    
+                        <a href="/tags/Agent/"># Agent</a>
+                    
+                        <a href="/tags/Obsidian/"># Obsidian</a>
+                    
+                        <a href="/tags/%E7%9F%A5%E8%AF%86%E7%AE%A1%E7%90%86/"># 知识管理</a>
+                    
+                        <a href="/tags/LLM-Wiki/"># LLM Wiki</a>
+                    
+                        <a href="/tags/%E8%AE%B0%E5%BF%86/"># 记忆</a>
+                    
+                        
+                </span>
+            </div>
+            <div>
+                <a href="javascript:window.history.back();">back</a>
+                <span>· </span>
+                <a href="/">home</a>
+            </div>
+        </section>
+        <section class="post-nav">
+            
+                <a class="prev" rel="prev" href="/2026/06/14/hermes-wechat-integration/">Hermes Agent 接入微信 ClawBot 实操指南</a>
+            
+            
+            <a class="next" rel="next" href="/2026/06/13/udp-source-code-analysis/">Linux UDP 协议栈源码解析</a>
+            
+        </section>
+
+
+    </article>
+</div>
+
+            </div>
+            <footer id="footer" class="footer">
+    <div class="copyright">
+        <span>© xiuzz | Powered by <a href="https://hexo.io" target="_blank">Hexo</a> & <a href="https://github.com/Siricee/hexo-theme-Chic" target="_blank">Chic</a></span>
+    </div>
+</footer>
+
+    </div>
+</body>
+
+</html>
